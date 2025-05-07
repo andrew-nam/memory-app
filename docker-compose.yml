@@ -1,9 +1,18 @@
 services:
+  vue:
+    build:
+      dockerfile: ./vue-frontend/frontend.Dockerfile
+    volumes:
+      - ./vue-frontend:/vue-frontend
+    ports:
+      - 5173:5173
   web:
-    build: .
+    build: 
+      context: ./django-backend
+      dockerfile: backend.Dockerfile
     command: python /code/manage.py runserver 0.0.0.0:8000
     volumes:
-      - .:/code
+      - ./django-backend:/code
     ports:
       - 8000:8000
     depends_on:
