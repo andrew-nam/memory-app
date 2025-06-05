@@ -8,7 +8,22 @@ wordList = list(set(i for i in wn.words()))
 
 @api_view()
 def random_words(request):
-    return Response(sample(wordList, 4))
+    defaultCount = 4
+    minCount = 1
+    maxCount = 10
+    count = request.query_params.get('count')
+    if count != None:
+        try:
+            count = int(request.query_params.get('count'))
+        except ValueError:
+            count = defaultCount
+    else:
+        count = defaultCount
+    if count < minCount :
+        count = minCount
+    elif count > maxCount :
+        count = maxCount
+    return Response(sample(wordList, count))
 
 #s.isalpha() 
 
