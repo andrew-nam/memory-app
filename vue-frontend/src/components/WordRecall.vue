@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeMount } from 'vue'
 import type { Ref } from 'vue'
 import WordContainer from './WordContainer.vue'
+import { useFetch } from './fetch';
 
 const props = defineProps<{
     wordCount: number
@@ -10,21 +11,46 @@ const props = defineProps<{
 const wordContainerList = ref(Array(props.wordCount).fill("")) // css display list in horizontal
 const wordGuesses = ref(Array(props.wordCount).fill(""))
 const currentWords: Ref<string[]> = ref([])
+const wordBank : Ref<string[]> = ref([])
 const isGuessesFinished = ref(currentWords.value.length == props.wordCount)
+const SERVER = new URL('http://127.0.0.1:8000/random-words/')
+var retries = 0
+const retryTotal = 5
+
+onBeforeMount(() => {
+    populateWordBank()
+})
 
 onMounted(() => {
-    populateWords()
+    getNewWords()
     console.log(wordGuesses)
 })
+
+async function populateWordBank() {
+    try {
+        const result = await useFetch(SERVER, '4000')
+        wordBank.value = result as string[]
+        console.log(wordBank.value)
+        console.log(wordBank.value.length)
+        retries = 0
+    } catch (e) {
+        console.error((e as Error).message)
+        if (retries < retryTotal) {
+            retries += 1
+            populateWordBank()
+        } else {
+            console.error("Failed " + retries + " times, quitting")
+        }
+    }
+}
 
 function getNewWords() {
     // async operation to get new words from server
     // populate wordcontainerlist with words
     console.log(props.wordCount)
-    const temp = []
-    for (let step = 0; step < props.wordCount; step++) {
-        temp.push("" + Math.floor(Math.random() * 11))
-    }
+    // wordContainerList = slice of wordBank, wordBank size reduces
+    const temp = wordBank.value.slice(0, props.wordCount)
+    wordBank.value = wordBank.value.splice(props.wordCount)
     return temp
 }
 
@@ -38,7 +64,10 @@ function reset() {
 
 function populateWords() {
     wordContainerList.value = getNewWords()
-      
+    console.log(wordBank.value.length)
+    if(wordBank.value.length < props.wordCount * 3) {
+        populateWordBank()
+    }
 
 }
 

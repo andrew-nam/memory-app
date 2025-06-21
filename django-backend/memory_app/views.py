@@ -10,7 +10,7 @@ wordList = list(set(i for i in wn.words()))
 def random_words(request):
     defaultCount = 4
     minCount = 1
-    maxCount = 10
+    maxCount = 10000
     count = request.query_params.get('count')
     if count != None:
         try:
@@ -23,7 +23,7 @@ def random_words(request):
         count = minCount
     elif count > maxCount :
         count = maxCount
-    return Response(sample(wordList, count))
+    return Response(sample(wordList, count), status=200, template_name=None, headers={'Access-Control-Allow-Origin': 'http://127.0.0.1:5173'})
 
 #s.isalpha() 
 
