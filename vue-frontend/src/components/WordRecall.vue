@@ -3,6 +3,8 @@ import { ref, onMounted, onBeforeMount } from 'vue'
 import type { Ref } from 'vue'
 import WordContainer from './WordContainer.vue'
 import { useFetch } from './fetch';
+import * as speechsdk from 'microsoft-cognitiveservices-speech-sdk'
+import { getTokenOrRefresh } from './token_util';
 
 const props = defineProps<{
     wordCount: number
@@ -13,10 +15,12 @@ const wordGuesses = ref(Array(props.wordCount).fill(""))
 const currentWords: Ref<string[]> = ref([])
 const wordBank : Ref<string[]> = ref([])
 const isGuessesFinished = ref(currentWords.value.length == props.wordCount)
-const SERVER = new URL('http://127.0.0.1:8000/random-words/')
+const SERVER = new URL('http://127.0.0.1:8000/api/random-words/')
 var retries = 0
 const retryTotal = 5
 const synth = window.speechSynthesis
+const displayText = ref('')
+const player = ref()
 
 onBeforeMount(() => {
     populateWordBank()
@@ -24,6 +28,54 @@ onBeforeMount(() => {
 
 onMounted(() => {
 })
+
+async function sttFromMic() {
+    const tokenObj = await getTokenOrRefresh();
+    const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
+    speechConfig.speechRecognitionLanguage = 'en-US';
+    
+    const audioConfig = speechsdk.AudioConfig.fromDefaultMicrophoneInput();
+    const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
+
+    recognizer.recognizeOnceAsync(result => {
+        if (result.reason === speechsdk.ResultReason.RecognizedSpeech) {
+            displayText.value = `RECOGNIZED: Text=${result.text}`
+        } else {
+            displayText.value = 'ERROR: Speech was cancelled or could not be recognized. Ensure your microphone is working properly.';
+        }
+    });
+}
+
+async function textToSpeech(textToSpeak:string) {
+        const tokenObj = await getTokenOrRefresh();
+        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
+        const myPlayer = new speechsdk.SpeakerAudioDestination();
+        player.value = myPlayer;
+        const audioConfig = speechsdk.AudioConfig.fromSpeakerOutput(player.value);
+
+        let synthesizer: speechsdk.SpeechSynthesizer | undefined = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
+
+        displayText.value = `speaking text: ${textToSpeak}...`;
+        synthesizer.speakTextAsync(
+        textToSpeak,
+        result => {
+            let text;
+            if (result.reason === speechsdk.ResultReason.SynthesizingAudioCompleted) {
+                text = `synthesis finished for "${textToSpeak}".\n`
+            } else if (result.reason === speechsdk.ResultReason.Canceled) {
+                text = `synthesis failed. Error detail: ${result.errorDetails}.\n`
+            }
+            (synthesizer as speechsdk.SpeechSynthesizer).close();
+            synthesizer = undefined;
+            displayText.value = text as string;
+        },
+        function (err) {
+            displayText.value = `Error: ${err}.\n`;
+
+            (synthesizer as speechsdk.SpeechSynthesizer).close();
+            synthesizer = undefined;
+        });
+    }
 
 async function populateWordBank() {
     try {
@@ -107,18 +159,9 @@ function begin() {
 
 function generateAudio() {
     console.log("Generating audio")
-    var utterance = wordContainerList.value.join(" ")
-    console.log(utterance)
-    const utterThis = new SpeechSynthesisUtterance(utterance)
-    utterThis.pitch = 1
-    utterThis.rate = .25
-    const voices = speechSynthesis.getVoices();
-    for (const voice of voices) {
-        if (voice.name === "Samantha") {
-        utterThis.voice = voice;
-        }
-    }
-    synth.speak(utterThis)
+    var textToSpeak = wordContainerList.value.join(" ")
+    console.log(textToSpeak)
+    textToSpeech(textToSpeak)
 }
 
 </script>
@@ -126,6 +169,7 @@ function generateAudio() {
 <template>
     <button @click="begin" id="begin-button" visibility="hidden">Begin</button>
     <div class="gameArea">
+        {{displayText}}
         <div class="wordsContainer">
             <WordContainer 
                 v-for="(word, index) in wordContainerList"

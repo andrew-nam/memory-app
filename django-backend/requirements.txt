@@ -4,3 +4,4 @@ sqlparse==0.5.3
 psycopg[binary]
 djangorestframework
 nltk==3.9.1
+requests==2.32.4
