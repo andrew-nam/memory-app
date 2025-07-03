@@ -29,7 +29,7 @@ onBeforeMount(() => {
 onMounted(() => {
 })
 
-async function sttFromMic() {
+async function sttFromMic(): Promise<string | Error> {
     const tokenObj = await getTokenOrRefresh();
     const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
     speechConfig.speechRecognitionLanguage = 'en-US';
@@ -37,13 +37,17 @@ async function sttFromMic() {
     const audioConfig = speechsdk.AudioConfig.fromDefaultMicrophoneInput();
     const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
 
+    var text = ''
     recognizer.recognizeOnceAsync(result => {
         if (result.reason === speechsdk.ResultReason.RecognizedSpeech) {
-            displayText.value = `RECOGNIZED: Text=${result.text}`
+            text = result.text
+            displayText.value = `RECOGNIZED: Text=${result.text}`;
         } else {
             displayText.value = 'ERROR: Speech was cancelled or could not be recognized. Ensure your microphone is working properly.';
+            return Error(displayText.value)
         }
     });
+    return text
 }
 
 async function textToSpeech(textToSpeak:string) {
@@ -132,10 +136,17 @@ function onWordInterpretted(words:string[]) {
     }
 }
 
-function testWord() {
+async function sayWord() {
     // call an event? Since speech to text will need to be some async outside call, will
     // need an event for when the answer is returned
-    onWordInterpretted(["test"])
+    var words: string | Error = await sttFromMic();
+    if (words instanceof Error) {
+        console.log(words.message);
+    } else {
+        var wordsArray = words.split(" ");
+        wordsArray = wordsArray.splice(props.wordCount);
+        onWordInterpretted(wordsArray);
+    }
     console.log(currentWords.value.length)
     console.log(props.wordCount)
     console.log(currentWords.value.length == props.wordCount)
@@ -182,7 +193,7 @@ function generateAudio() {
         <button @click="playAgain" class="buttons">Play Again</button>
         <button @click="reset" class="buttons">Reset</button>
         <button @click="skip" class="buttons">Skip</button>
-        <button @click="testWord" class="buttons">Test</button>
+        <button @click="sayWord" class="buttons">Say words</button>
     </div>
 </template>
 
