@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeMount } from 'vue'
+import { ref, onBeforeMount } from 'vue'
 import type { Ref } from 'vue'
 import WordContainer from './WordContainer.vue'
 import { useFetch } from './fetch';
@@ -23,9 +23,6 @@ const retryTotal = 5
 
 onBeforeMount(() => {
     populateWordBank()
-})
-
-onMounted(() => {
 })
 
 async function populateWordBank() {

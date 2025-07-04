@@ -1,31 +1,49 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { ref } from 'vue'
+import OptionsModal from './components/OptionsModal.vue';
 import WordRecall from './components/WordRecall.vue'
+
+const showOptionsModal = ref(false);
+const setWordCount = ref(4);
+const timeBetweenWords = ref(1);
+
+function updateSettings(newWordCount:number, newTimeBetweenWords:number) {
+  setWordCount.value = newWordCount;
+  timeBetweenWords.value = newTimeBetweenWords;
+  showOptionsModal.value = false;
+
+}
 </script>
 
 <template>
   <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <WordRecall :wordCount="4"></WordRecall>
-      <!-- <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav> -->
+    <div>
+      <button id="options" @click="showOptionsModal = true">Options</button>
+      <Teleport to="body">
+        <OptionsModal :show="showOptionsModal" 
+          :wordCount="setWordCount" 
+          :timeBetweenWords="timeBetweenWords" 
+          @save="updateSettings"
+          @close="showOptionsModal = false"
+          >
+          <template #header>
+            <h3>Options</h3>
+          </template>
+        </OptionsModal>
+      </Teleport>
     </div>
   </header>
-
-  <RouterView />
+  
+  <body>
+    <div><WordRecall :wordCount="setWordCount"></WordRecall></div>
+  </body>
+  
+ 
 </template>
 
 <style scoped>
 header {
   line-height: 1.5;
-  max-height: 100vh;
 }
 
 .logo {
@@ -61,7 +79,7 @@ nav a:first-of-type {
 @media (min-width: 1024px) {
   header {
     display: flex;
-    place-items: center;
+    place-items: right;
     padding-right: calc(var(--section-gap) / 2);
   }
 
