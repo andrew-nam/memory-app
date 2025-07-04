@@ -12,14 +12,22 @@ const props = defineProps<{
 <template>
     {{ word }}
     {{ wordGuess }}
-    <div v-if="isComplete" :class="[props.wordGuess == props.word ? 'correct' : 'incorrect']"> " "</div>
+    <div class=square v-if="isComplete" :class="[props.wordGuess == props.word ? 'correct' : 'incorrect']"></div>
     <div class="pending" ></div>
 
 </template>
 
 <style>
+.square {
+    width: 50px;
+    height: 50px;
+}
+
 .incorrect {
     background: red
+}
+.correct {
+    background: green
 }
 
 .pending {

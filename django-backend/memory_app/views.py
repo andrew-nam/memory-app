@@ -2,11 +2,15 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from nltk.corpus import wordnet as wn
+from nltk.corpus import brown
+from nltk import FreqDist
 from random import sample
 import requests
 from os import environ
 
-wordList = list(set(i for i in wn.words()))
+##wordList = list(set(i for i in wn.words() if i.isalpha()))
+wordList = list(k for (k, v) in FreqDist(list(w.lower() for w in brown.words(categories=['news', 'editorial', 'reviews']) if w.isalpha and len(w) >= 4)).most_common(6000))
+
 
 @api_view()
 def random_words(request):

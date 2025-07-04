@@ -12,15 +12,14 @@ const props = defineProps<{
 
 const wordContainerList = ref(Array(props.wordCount).fill("")) // css display list in horizontal
 const wordGuesses = ref(Array(props.wordCount).fill(""))
-const currentWords: Ref<string[]> = ref([])
 const wordBank : Ref<string[]> = ref([])
-const isGuessesFinished = ref(currentWords.value.length == props.wordCount)
+const isGuessesFinished = ref(false)
+const displayText = ref('')
+
 const SERVER = new URL('http://127.0.0.1:8000/api/random-words/')
 var retries = 0
+var wordGuessesCount = 0
 const retryTotal = 5
-const synth = window.speechSynthesis
-const displayText = ref('')
-const player = ref()
 
 onBeforeMount(() => {
     populateWordBank()
@@ -29,33 +28,28 @@ onBeforeMount(() => {
 onMounted(() => {
 })
 
-async function sttFromMic(): Promise<string | Error> {
-    const tokenObj = await getTokenOrRefresh();
-    const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
-    speechConfig.speechRecognitionLanguage = 'en-US';
-    
-    const audioConfig = speechsdk.AudioConfig.fromDefaultMicrophoneInput();
-    const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
-
-    var text = ''
-    recognizer.recognizeOnceAsync(result => {
-        if (result.reason === speechsdk.ResultReason.RecognizedSpeech) {
-            text = result.text
-            displayText.value = `RECOGNIZED: Text=${result.text}`;
+async function populateWordBank() {
+    try {
+        const result = await useFetch(SERVER, '4000');
+        wordBank.value = result as string[];
+        retries = 0;
+        (document.getElementById("begin-button") as HTMLElement).style.visibility = "visible";
+    } catch (e) {
+        console.error((e as Error).message);
+        if (retries < retryTotal) {
+            retries ++;
+            populateWordBank();
         } else {
-            displayText.value = 'ERROR: Speech was cancelled or could not be recognized. Ensure your microphone is working properly.';
-            return Error(displayText.value)
+            console.error("Failed " + retries + " times, quitting");
         }
-    });
-    return text
+    }
 }
 
 async function textToSpeech(textToSpeak:string) {
         const tokenObj = await getTokenOrRefresh();
         const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
         const myPlayer = new speechsdk.SpeakerAudioDestination();
-        player.value = myPlayer;
-        const audioConfig = speechsdk.AudioConfig.fromSpeakerOutput(player.value);
+        const audioConfig = speechsdk.AudioConfig.fromSpeakerOutput(myPlayer);
 
         let synthesizer: speechsdk.SpeechSynthesizer | undefined = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
 
@@ -79,83 +73,36 @@ async function textToSpeech(textToSpeak:string) {
             (synthesizer as speechsdk.SpeechSynthesizer).close();
             synthesizer = undefined;
         });
-    }
+}
 
-async function populateWordBank() {
-    try {
-        const result = await useFetch(SERVER, '4000')
-        wordBank.value = result as string[]
-        console.log(wordBank.value)
-        console.log(wordBank.value.length)
-        retries = 0;
-        (document.getElementById("begin-button") as HTMLElement).style.visibility = "visible";
-    } catch (e) {
-        console.error((e as Error).message)
-        if (retries < retryTotal) {
-            retries += 1
-            populateWordBank()
+async function sttFromMic(){
+    const tokenObj = await getTokenOrRefresh();
+    const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
+    speechConfig.speechRecognitionLanguage = 'en-US';
+    
+    const audioConfig = speechsdk.AudioConfig.fromDefaultMicrophoneInput();
+    const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
+
+    await recognizer.recognizeOnceAsync(result => {
+        if (result.reason === speechsdk.ResultReason.RecognizedSpeech) {
+            displayText.value = `RECOGNIZED: Text=${result.text}`;
+            onWordsInterpretted(result.text);
         } else {
-            console.error("Failed " + retries + " times, quitting")
+            displayText.value = 'ERROR: Speech was cancelled or could not be recognized. Ensure your microphone is working properly.';
         }
+    });
+}
+
+function onWordsInterpretted(words:string) {
+    var wordsArray = words.toLowerCase().split(" ");
+    wordsArray = wordsArray.map((str) => str.replace(/[\p{P}$+<=>^`|~]/gu, '')).reverse();
+
+    var guessesToFill = Math.min(wordsArray.length + wordGuessesCount, props.wordCount)
+    for(let i = wordGuessesCount; i < guessesToFill; i++) {
+        wordGuesses.value[i] = wordsArray.pop();
+        wordGuessesCount++;
     }
-}
-
-function getNewWords() {
-    // async operation to get new words from server
-    // populate wordcontainerlist with words
-    console.log(props.wordCount)
-    // wordContainerList = slice of wordBank, wordBank size reduces
-    const temp = wordBank.value.slice(0, props.wordCount)
-    wordBank.value = wordBank.value.splice(props.wordCount)
-    return temp
-}
-
-function playAgain() {
-    generateAudio()
-}
-
-function reset() {
-    wordGuesses.value = Array(props.wordCount).fill("")
-}
-
-function populateWords() {
-    wordContainerList.value = getNewWords()
-    console.log(wordBank.value.length)
-    if(wordBank.value.length < props.wordCount * 3) {
-        populateWordBank()
-    }
-
-}
-
-function onWordInterpretted(words:string[]) {
-    for (let i = 0; currentWords.value.length < props.wordCount && i < words.length; i++) {
-        currentWords.value.push(words[i])
-    }
-    for(let i = 0; i < currentWords.value.length; i++) {
-        wordGuesses.value[i] = currentWords.value[i]
-    }
-}
-
-async function sayWord() {
-    // call an event? Since speech to text will need to be some async outside call, will
-    // need an event for when the answer is returned
-    var words: string | Error = await sttFromMic();
-    if (words instanceof Error) {
-        console.log(words.message);
-    } else {
-        var wordsArray = words.split(" ");
-        wordsArray = wordsArray.splice(props.wordCount);
-        onWordInterpretted(wordsArray);
-    }
-    console.log(currentWords.value.length)
-    console.log(props.wordCount)
-    console.log(currentWords.value.length == props.wordCount)
-}
-
-function skip() {
-    reset()
-    populateWords()
-    generateAudio()
+    isGuessesFinished.value = wordGuessesCount == props.wordCount;
 }
 
 function begin() {
@@ -165,14 +112,44 @@ function begin() {
     var gameArea = document.getElementsByClassName("gameArea");
     (gameArea.item(0) as HTMLElement).style.visibility="visible";
     
-    generateAudio()
+    generateAudio();
 }
 
 function generateAudio() {
-    console.log("Generating audio")
-    var textToSpeak = wordContainerList.value.join(" ")
-    console.log(textToSpeak)
-    textToSpeech(textToSpeak)
+    var textToSpeak = wordContainerList.value.join(" ");
+    textToSpeech(textToSpeak);
+}
+
+function playAgain() {
+    generateAudio();
+}
+
+function reset() {  
+    for(let i = 0; i < props.wordCount; i++) {
+        wordGuesses.value[i] = "";
+    }
+    wordGuessesCount = 0;
+    isGuessesFinished.value = false;
+}
+
+function populateWords() {
+    wordContainerList.value = getNewWords().map((str) => str.replace(/[\p{P}$+<=>^`|~]/gu, ''));
+    console.log(wordBank.value.length);
+    if(wordBank.value.length < props.wordCount * 3) {
+        populateWordBank();
+    }
+}
+
+function getNewWords() {
+    const temp = wordBank.value.slice(0, props.wordCount);
+    wordBank.value = wordBank.value.splice(props.wordCount);
+    return temp;
+}
+
+function skip() {
+    reset();
+    populateWords();
+    generateAudio();
 }
 
 </script>
@@ -193,7 +170,7 @@ function generateAudio() {
         <button @click="playAgain" class="buttons">Play Again</button>
         <button @click="reset" class="buttons">Reset</button>
         <button @click="skip" class="buttons">Skip</button>
-        <button @click="sayWord" class="buttons">Say words</button>
+        <button @click="sttFromMic" class="buttons">Say words</button>
     </div>
 </template>
 
