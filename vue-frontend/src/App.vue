@@ -5,101 +5,57 @@ import WordRecall from './components/WordRecall.vue'
 
 const showOptionsModal = ref(false);
 const setWordCount = ref(4);
-const timeBetweenWords = ref(1);
+const setTimeBetweenWords = ref(1);
+const setAudioRepeats = ref(2);
 
-function updateSettings(newWordCount:number, newTimeBetweenWords:number) {
+function updateSettings(newWordCount:number, newTimeBetweenWords:number, newAudioRepeats:number) {
   setWordCount.value = newWordCount;
-  timeBetweenWords.value = newTimeBetweenWords;
+  setTimeBetweenWords.value = newTimeBetweenWords;
+  setAudioRepeats.value = newAudioRepeats;
   showOptionsModal.value = false;
 
 }
 </script>
 
 <template>
-  <header>
-    <div>
-      <button id="options" @click="showOptionsModal = true">Options</button>
-      <Teleport to="body">
-        <OptionsModal :show="showOptionsModal" 
-          :wordCount="setWordCount" 
-          :timeBetweenWords="timeBetweenWords" 
-          @save="updateSettings"
-          @close="showOptionsModal = false"
-          >
-          <template #header>
-            <h3>Options</h3>
-          </template>
-        </OptionsModal>
-      </Teleport>
-    </div>
-  </header>
-  
   <body>
-    <div><WordRecall :wordCount="setWordCount"></WordRecall></div>
+    <header>
+      <div class="options">
+        <button id="options" @click="showOptionsModal = true">Options</button>
+        <Teleport to="body">
+          <OptionsModal :show="showOptionsModal" 
+            :wordCount="setWordCount" 
+            :timeBetweenWords="setTimeBetweenWords" 
+            :audioRepeats="setAudioRepeats"
+            @save="updateSettings"
+            @close="showOptionsModal = false"
+            >
+            <template #header>
+              <h3>Options</h3>
+            </template>
+          </OptionsModal>
+        </Teleport>
+      </div>
+    </header>
+    <div class="game">
+      <WordRecall :wordCount="setWordCount"
+        :timeBetweenWords="setTimeBetweenWords"
+        :audioRepeats="setAudioRepeats"></WordRecall>
+    </div>
   </body>
   
  
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
+  .options{
     display: flex;
-    place-items: right;
-    padding-right: calc(var(--section-gap) / 2);
+    justify-content: flex-end;
   }
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
+  body .game{
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-around;
   }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
-}
 </style>

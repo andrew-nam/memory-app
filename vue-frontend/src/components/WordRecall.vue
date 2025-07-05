@@ -7,7 +7,9 @@ import * as speechsdk from 'microsoft-cognitiveservices-speech-sdk'
 import { getTokenOrRefresh } from './token_util';
 
 const props = defineProps<{
-    wordCount: number
+    wordCount: number,
+    timeBetweenWords: number,
+    audioRepeats: number
 }>()
 
 const wordContainerList = ref(Array(props.wordCount).fill("")) // css display list in horizontal
@@ -16,10 +18,11 @@ const wordBank : Ref<string[]> = ref([])
 const isGuessesFinished = ref(false)
 const displayText = ref('')
 
-const SERVER = new URL('http://127.0.0.1:8000/api/random-words/')
-var retries = 0
-var wordGuessesCount = 0
-const retryTotal = 5
+const SERVER = new URL('http://127.0.0.1:8000/api/random-words/');
+var retries = 0;
+var retryTotal = 5;
+var wordGuessesCount = 0;
+var audioPlays = 0;
 
 onBeforeMount(() => {
     populateWordBank()
@@ -118,10 +121,19 @@ function generateAudio() {
 }
 
 function playAgain() {
+    audioPlays++;
+    console.log(audioPlays)
+    console.log(props.audioRepeats)
+    if(audioPlays >= props.audioRepeats) {
+        console.log("Disabling button");
+        document.getElementById("repeat-button")?.setAttribute("disabled", "true");
+    }
     generateAudio();
 }
 
-function reset() {  
+function reset() {
+    audioPlays = 0;
+    document.getElementById("repeat-button")?.removeAttribute("disabled");
     for(let i = 0; i < props.wordCount; i++) {
         wordGuesses.value[i] = "";
     }
@@ -152,7 +164,9 @@ function skip() {
 </script>
 
 <template>
-    <button @click="begin" id="begin-button" visibility="hidden">Begin</button>
+    <div class="buttons">
+        <button @click="begin" id="begin-button" visibility="hidden">Begin</button>
+    </div>
     <div class="gameArea">
         {{displayText}}
         <div class="wordsContainer">
@@ -164,20 +178,31 @@ function skip() {
                 :key="index"
             ></WordContainer>
         </div>
-        <button @click="playAgain" class="buttons">Play Again</button>
-        <button @click="reset" class="buttons">Reset</button>
-        <button @click="skip" class="buttons">Skip</button>
-        <button @click="sttFromMic" class="buttons">Say words</button>
+        <div class="buttons">
+            <button @click="playAgain" class="buttons" id="repeat-button">Play Again</button>
+            <button @click="reset" class="buttons">Reset</button>
+            <button @click="skip" class="buttons">Skip</button>
+            <button @click="sttFromMic" class="buttons">Say words</button>
+        </div>
+        
     </div>
 </template>
 
 <style>
 .wordsContainer {
     display: flex;
+    align-items: center;
+    justify-content: space-around;
+    flex-wrap: wrap;
 }
 
 .gameArea {
     visibility: hidden;
+    align-items: center;
+}
+.buttons {
+    display: flex;
+    justify-content: center;
 }
 
 ol {

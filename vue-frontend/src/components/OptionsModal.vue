@@ -2,10 +2,12 @@
 const props = defineProps({
   show: Boolean,
   wordCount: Number,
-  timeBetweenWords: Number
+  timeBetweenWords: Number,
+  audioRepeats: Number
 })
-var wordCount = props.wordCount
-var timeBetweenWords = props.timeBetweenWords
+var wordCount = props.wordCount;
+var timeBetweenWords = props.timeBetweenWords;
+var audioRepeats = props.audioRepeats;
 </script>
 
 <template>
@@ -22,13 +24,16 @@ var timeBetweenWords = props.timeBetweenWords
 
           <label for="wait-time">Seconds between words:</label>
           <input type="number" id="wait-time" min="1" max="10" v-model="timeBetweenWords"/>
+
+          <label for="audio-repeats">Maximum allowable audio repeats:</label>
+          <input type="number" id="audio-repeats" min="0" max="10" v-model="audioRepeats"/>
         </div>
 
         <div class="modal-footer">
           <slot name="footer">
             <button
               class="modal-default-button"
-              @click="$emit('save', wordCount, timeBetweenWords)"
+              @click="$emit('save', wordCount, timeBetweenWords, audioRepeats)"
             >Save Settings</button>
             <button
               class="modal-default-button"
