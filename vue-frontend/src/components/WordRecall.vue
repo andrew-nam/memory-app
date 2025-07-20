@@ -1,49 +1,32 @@
 <script setup lang="ts">
-import { ref, onBeforeMount } from 'vue'
-import type { Ref } from 'vue'
-import WordContainer from './WordContainer.vue'
-import { useFetch } from './fetch';
-import * as speechsdk from 'microsoft-cognitiveservices-speech-sdk'
+import { ref, onBeforeMount } from 'vue';
+import * as speechsdk from 'microsoft-cognitiveservices-speech-sdk';
+import WordContainer from './WordContainer.vue';
+import { WordBank } from './wordBank';
 import { getTokenOrRefresh } from './token_util';
 
 const props = defineProps<{
     wordCount: number,
     timeBetweenWords: number,
     audioRepeats: number
-}>()
+}>();
 
-const wordContainerList = ref(Array(props.wordCount).fill("")) // css display list in horizontal
-const wordGuesses = ref(Array(props.wordCount).fill(""))
-const wordBank : Ref<string[]> = ref([])
-const isGuessesFinished = ref(false)
-const displayText = ref('')
+const wordContainerList = ref(Array(props.wordCount).fill("")); // css display list in horizontal
+const wordGuesses = ref(Array(props.wordCount).fill(""));
+const wordBank = new WordBank();
+const isGuessesFinished = ref(false);
+const displayText = ref('');
 
-const SERVER = new URL('http://127.0.0.1:8000/api/random-words/');
-var retries = 0;
-var retryTotal = 5;
+const showBeginButton = ref(false);
+const showGameArea = ref(false);
+const disableRepeatButton = ref(false);
+
 var wordGuessesCount = 0;
 var audioPlays = 0;
 
-onBeforeMount(() => {
-    populateWordBank()
-})
-
-async function populateWordBank() {
-    try {
-        const result = await useFetch(SERVER, '4000');
-        wordBank.value = result as string[];
-        retries = 0;
-        (document.getElementById("begin-button") as HTMLElement).style.visibility = "visible";
-    } catch (e) {
-        console.error((e as Error).message);
-        if (retries < retryTotal) {
-            retries ++;
-            populateWordBank();
-        } else {
-            console.error("Failed " + retries + " times, quitting");
-        }
-    }
-}
+onBeforeMount(async () => {
+    showBeginButton.value = await wordBank.init();
+});
 
 async function textToSpeech(textToSpeak:string) {
         const tokenObj = await getTokenOrRefresh();
@@ -59,9 +42,9 @@ async function textToSpeech(textToSpeak:string) {
         result => {
             let text;
             if (result.reason === speechsdk.ResultReason.SynthesizingAudioCompleted) {
-                text = `synthesis finished for "${textToSpeak}".\n`
+                text = `synthesis finished for "${textToSpeak}".\n`;
             } else if (result.reason === speechsdk.ResultReason.Canceled) {
-                text = `synthesis failed. Error detail: ${result.errorDetails}.\n`
+                text = `synthesis failed. Error detail: ${result.errorDetails}.\n`;
             }
             (synthesizer as speechsdk.SpeechSynthesizer).close();
             synthesizer = undefined;
@@ -97,7 +80,7 @@ function onWordsInterpretted(words:string) {
     var wordsArray = words.toLowerCase().split(" ");
     wordsArray = wordsArray.map((str) => str.replace(/[\p{P}$+<=>^`|~]/gu, '')).reverse();
 
-    var guessesToFill = Math.min(wordsArray.length + wordGuessesCount, props.wordCount)
+    var guessesToFill = Math.min(wordsArray.length + wordGuessesCount, props.wordCount);
     for(let i = wordGuessesCount; i < guessesToFill; i++) {
         wordGuesses.value[i] = wordsArray.pop();
         wordGuessesCount++;
@@ -105,12 +88,10 @@ function onWordsInterpretted(words:string) {
     isGuessesFinished.value = wordGuessesCount == props.wordCount;
 }
 
-function begin() {
-    populateWords();
-    var beginButton = document.getElementById("begin-button");
-    (beginButton as HTMLElement).style.display="none";
-    var gameArea = document.getElementsByClassName("gameArea");
-    (gameArea.item(0) as HTMLElement).style.visibility="visible";
+async function begin() {
+    await populateWordContainers();
+    showBeginButton.value = false;
+    showGameArea.value = true;
     
     generateAudio();
 }
@@ -122,18 +103,17 @@ function generateAudio() {
 
 function playAgain() {
     audioPlays++;
-    console.log(audioPlays)
-    console.log(props.audioRepeats)
     if(audioPlays >= props.audioRepeats) {
-        console.log("Disabling button");
-        document.getElementById("repeat-button")?.setAttribute("disabled", "true");
+        disableRepeatButton.value = true;
     }
     generateAudio();
 }
 
 function reset() {
     audioPlays = 0;
-    document.getElementById("repeat-button")?.removeAttribute("disabled");
+    if(props.audioRepeats > 0) {
+        disableRepeatButton.value = false;
+    }
     for(let i = 0; i < props.wordCount; i++) {
         wordGuesses.value[i] = "";
     }
@@ -141,23 +121,14 @@ function reset() {
     isGuessesFinished.value = false;
 }
 
-function populateWords() {
-    wordContainerList.value = getNewWords().map((str) => str.replace(/[\p{P}$+<=>^`|~]/gu, ''));
-    console.log(wordBank.value.length);
-    if(wordBank.value.length < props.wordCount * 3) {
-        populateWordBank();
-    }
-}
-
-function getNewWords() {
-    const temp = wordBank.value.slice(0, props.wordCount);
-    wordBank.value = wordBank.value.splice(props.wordCount);
-    return temp;
+async function populateWordContainers() {
+    var words = await wordBank.getNewWords(wordContainerList.value.length);
+    wordContainerList.value = words;
 }
 
 function skip() {
     reset();
-    populateWords();
+    populateWordContainers();
     generateAudio();
 }
 
@@ -165,9 +136,9 @@ function skip() {
 
 <template>
     <div class="buttons">
-        <button @click="begin" id="begin-button" visibility="hidden">Begin</button>
+        <button @click="begin" v-show="showBeginButton">Begin</button>
     </div>
-    <div class="gameArea">
+    <div class="gameArea" v-show="showGameArea">
         {{displayText}}
         <div class="wordsContainer">
             <WordContainer 
@@ -179,7 +150,7 @@ function skip() {
             ></WordContainer>
         </div>
         <div class="buttons">
-            <button @click="playAgain" class="buttons" id="repeat-button">Play Again</button>
+            <button @click="playAgain" class="buttons" :disabled="disableRepeatButton">Play Again</button>
             <button @click="reset" class="buttons">Reset</button>
             <button @click="skip" class="buttons">Skip</button>
             <button @click="sttFromMic" class="buttons">Say words</button>
@@ -197,7 +168,6 @@ function skip() {
 }
 
 .gameArea {
-    visibility: hidden;
     align-items: center;
 }
 .buttons {
