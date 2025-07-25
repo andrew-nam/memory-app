@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, onBeforeMount } from 'vue';
-import * as speechsdk from 'microsoft-cognitiveservices-speech-sdk';
 import WordContainer from './WordContainer.vue';
 import { WordBank } from './wordBank';
-import { getTokenOrRefresh } from './token_util';
+import { textToSpeech, sttFromMic } from './speechServices';
 
 const props = defineProps<{
     wordCount: number,
@@ -14,12 +13,11 @@ const props = defineProps<{
 const wordContainerList = ref(Array(props.wordCount).fill("")); // css display list in horizontal
 const wordGuesses = ref(Array(props.wordCount).fill(""));
 const wordBank = new WordBank();
-const isGuessesFinished = ref(false);
-const displayText = ref('');
 
 const showBeginButton = ref(false);
 const showGameArea = ref(false);
 const disableRepeatButton = ref(false);
+const isGuessesFinished = ref(false);
 
 var wordGuessesCount = 0;
 var audioPlays = 0;
@@ -28,57 +26,14 @@ onBeforeMount(async () => {
     showBeginButton.value = await wordBank.init();
 });
 
-async function textToSpeech(textToSpeak:string) {
-        const tokenObj = await getTokenOrRefresh();
-        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
-        const myPlayer = new speechsdk.SpeakerAudioDestination();
-        const audioConfig = speechsdk.AudioConfig.fromSpeakerOutput(myPlayer);
-
-        let synthesizer: speechsdk.SpeechSynthesizer | undefined = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
-
-        displayText.value = `speaking text: ${textToSpeak}...`;
-        synthesizer.speakTextAsync(
-        textToSpeak,
-        result => {
-            let text;
-            if (result.reason === speechsdk.ResultReason.SynthesizingAudioCompleted) {
-                text = `synthesis finished for "${textToSpeak}".\n`;
-            } else if (result.reason === speechsdk.ResultReason.Canceled) {
-                text = `synthesis failed. Error detail: ${result.errorDetails}.\n`;
-            }
-            (synthesizer as speechsdk.SpeechSynthesizer).close();
-            synthesizer = undefined;
-            displayText.value = text as string;
-        },
-        function (err) {
-            displayText.value = `Error: ${err}.\n`;
-
-            (synthesizer as speechsdk.SpeechSynthesizer).close();
-            synthesizer = undefined;
-        });
-}
-
-async function sttFromMic(){
-    const tokenObj = await getTokenOrRefresh();
-    const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
-    speechConfig.speechRecognitionLanguage = 'en-US';
-    
-    const audioConfig = speechsdk.AudioConfig.fromDefaultMicrophoneInput();
-    const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
-
-    await recognizer.recognizeOnceAsync(result => {
-        if (result.reason === speechsdk.ResultReason.RecognizedSpeech) {
-            displayText.value = `RECOGNIZED: Text=${result.text}`;
-            onWordsInterpretted(result.text);
-        } else {
-            displayText.value = 'ERROR: Speech was cancelled or could not be recognized. Ensure your microphone is working properly.';
-        }
-    });
+async function onListenForWords() {
+    var recognizedWords = await sttFromMic();
+    onWordsInterpretted(recognizedWords as string);
 }
 
 function onWordsInterpretted(words:string) {
     var wordsArray = words.toLowerCase().split(" ");
-    wordsArray = wordsArray.map((str) => str.replace(/[\p{P}$+<=>^`|~]/gu, '')).reverse();
+    wordsArray = wordsArray.map((str) => str.replace(/[\p{P}$+<=>^`|~.]/gu, '')).reverse();
 
     var guessesToFill = Math.min(wordsArray.length + wordGuessesCount, props.wordCount);
     for(let i = wordGuessesCount; i < guessesToFill; i++) {
@@ -139,7 +94,6 @@ function skip() {
         <button @click="begin" v-show="showBeginButton">Begin</button>
     </div>
     <div class="gameArea" v-show="showGameArea">
-        {{displayText}}
         <div class="wordsContainer">
             <WordContainer 
                 v-for="(word, index) in wordContainerList"
@@ -153,7 +107,7 @@ function skip() {
             <button @click="playAgain" class="buttons" :disabled="disableRepeatButton">Play Again</button>
             <button @click="reset" class="buttons">Reset</button>
             <button @click="skip" class="buttons">Skip</button>
-            <button @click="sttFromMic" class="buttons">Say words</button>
+            <button @click="onListenForWords" class="buttons">Say words</button>
         </div>
         
     </div>
