@@ -1,13 +1,13 @@
 <script setup lang="ts">
-const props = defineProps({
-  show: Boolean,
-  wordCount: Number,
-  timeBetweenWords: Number,
-  audioRepeats: Number
-})
-var wordCount = props.wordCount;
-var timeBetweenWords = props.timeBetweenWords;
-var audioRepeats = props.audioRepeats;
+  const props = defineProps({
+    show: Boolean,
+    wordCount: Number,
+    timeBetweenWords: Number,
+    audioRepeats: Number
+  })
+  var wordCount = props.wordCount;
+  var timeBetweenWords = props.timeBetweenWords;
+  var audioRepeats = props.audioRepeats;
 </script>
 
 <template>

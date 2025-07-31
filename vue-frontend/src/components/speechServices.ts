@@ -1,4 +1,4 @@
-import { getTokenOrRefresh } from './token_util';
+import { getTokenOrRefresh } from '../utils/tokenUtils';
 import * as speechsdk from 'microsoft-cognitiveservices-speech-sdk';
 
 export async function textToSpeech(textToSpeak : string) {

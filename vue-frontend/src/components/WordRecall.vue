@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onBeforeMount } from 'vue';
 import WordContainer from './WordContainer.vue';
-import { WordBank } from './wordBank';
+import { WordBank, wordBankErrors } from './wordBank';
 import { textToSpeech, sttFromMic } from './speechServices';
+import { removePunctuations } from '@/utils/stringUtils';
 
 const props = defineProps<{
     wordCount: number,
@@ -18,12 +19,13 @@ const showBeginButton = ref(false);
 const showGameArea = ref(false);
 const disableRepeatButton = ref(false);
 const isGuessesFinished = ref(false);
+const errorDisplay = wordBankErrors;
 
 var wordGuessesCount = 0;
 var audioPlays = 0;
 
 onBeforeMount(async () => {
-    showBeginButton.value = await wordBank.init();
+    showBeginButton.value = await wordBank.populateWordBank();
 });
 
 async function onListenForWords() {
@@ -33,7 +35,7 @@ async function onListenForWords() {
 
 function onWordsInterpretted(words:string) {
     var wordsArray = words.toLowerCase().split(" ");
-    wordsArray = wordsArray.map((str) => str.replace(/[\p{P}$+<=>^`|~.]/gu, '')).reverse();
+    wordsArray = wordsArray.map((str) => removePunctuations(str)).reverse();
 
     var guessesToFill = Math.min(wordsArray.length + wordGuessesCount, props.wordCount);
     for(let i = wordGuessesCount; i < guessesToFill; i++) {
@@ -77,8 +79,13 @@ function reset() {
 }
 
 async function populateWordContainers() {
-    var words = await wordBank.getNewWords(wordContainerList.value.length);
-    wordContainerList.value = words;
+    var words = await wordBank.requestNewWords(wordContainerList.value.length);
+    if (words == null) {
+        // TODO: Error messaging when not enough words and populate fails
+        // TODO: display a try again button
+    } else {
+        wordContainerList.value = words;
+    }
 }
 
 function skip() {
@@ -94,6 +101,7 @@ function skip() {
         <button @click="begin" v-show="showBeginButton">Begin</button>
     </div>
     <div class="gameArea" v-show="showGameArea">
+        <p v-show="errorDisplay.length > 0">{{ errorDisplay }}</p>
         <div class="wordsContainer">
             <WordContainer 
                 v-for="(word, index) in wordContainerList"

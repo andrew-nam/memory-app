@@ -1,49 +1,51 @@
-import { useFetch } from "./fetch";
+import { ref } from 'vue';
+import { useFetch } from "../utils/fetch";
+import { removePunctuations } from "../utils/stringUtils";
 
 const SERVER = new URL('http://127.0.0.1:8000/api/random-words/');
-const MIN_WORDBANK_SIZE = 30;
+const MIN_WORDBANK_SIZE = 10;
 
-var retries = 0;
-var retryTotal = 5;
+export const wordBankErrors = ref("");
 
 export class WordBank {
+
+    _useFetch = useFetch;
+    server = SERVER;
+    minWordBankSize = MIN_WORDBANK_SIZE;
     wordBank : string[] = [];
     
-    async init() : Promise<boolean> {
-        return this.populateWordBank();
-    }
-
-    private async populateWordBank() : Promise<boolean>{
-        try {
-            const result = await useFetch(SERVER, '4000');
+    async populateWordBank() : Promise<boolean> {
+        const result = await this._useFetch(this.server, '4000');
+        if(result instanceof Error) {
+            console.error("Failed after maximum number of retry attempts, quitting");
+            wordBankErrors.value = `Failed after maximum number of attempts, press retry to try again.`;
+            return false;
+        } else {
             this.wordBank = result as string[];
-            retries = 0;
             return true;
-        } catch (e) {
-            console.error((e as Error).message);
-            if (retries < retryTotal) {
-                retries++;
-                return this.populateWordBank();
-            } else {
-                console.error("Failed " + retries + " times, quitting");
-                return false;
-            }
         }
     }
 
-    async getNewWords(wordCount : number) {
-        console.log(this.wordBank.length);
-        if(this.wordBank.length < wordCount) {
-            await this.populateWordBank();
+    async requestNewWords(wordCount : number) {
+        console.log(`length is ${this.wordBank.length}, wordcount is ${wordCount}`);
+        var temp = await this.populateWordBank();
+        console.log(`result is ${temp}`);
+        if(this.wordBank.length < wordCount && !(await this.populateWordBank())) {
+            console.log("Returning null");
+            return null;
         }
-        const temp = this.wordBank.slice(0, wordCount);
-        this.wordBank = this.wordBank.splice(wordCount);
-        temp.map((str) => str.replace(/[\p{P}$+<=>^`|~]/gu, ''));
-        console.log(temp);
-
-        if(this.wordBank.length < MIN_WORDBANK_SIZE) {
+        var result = this.getNewWords(wordCount);
+        if(this.wordBank.length < this.minWordBankSize) {
             this.populateWordBank();
         }
-        return temp;
+        return result;
+    }
+
+    private async getNewWords(wordCount : number) {
+        const selectedWords = this.wordBank.slice(0, wordCount);
+        this.wordBank = this.wordBank.splice(wordCount);
+        selectedWords.map((str) => removePunctuations(str));
+
+        return selectedWords;
     }
 }
