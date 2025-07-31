@@ -3,7 +3,7 @@ import { useFetch } from "../utils/fetch";
 import { removePunctuations } from "../utils/stringUtils";
 
 const SERVER = new URL('http://127.0.0.1:8000/api/random-words/');
-const MIN_WORDBANK_SIZE = 10;
+const MIN_WORDBANK_SIZE = 30;
 
 export const wordBankErrors = ref("");
 
@@ -27,11 +27,7 @@ export class WordBank {
     }
 
     async requestNewWords(wordCount : number) {
-        console.log(`length is ${this.wordBank.length}, wordcount is ${wordCount}`);
-        var temp = await this.populateWordBank();
-        console.log(`result is ${temp}`);
         if(this.wordBank.length < wordCount && !(await this.populateWordBank())) {
-            console.log("Returning null");
             return null;
         }
         var result = this.getNewWords(wordCount);
