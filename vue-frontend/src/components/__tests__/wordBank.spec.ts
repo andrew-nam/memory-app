@@ -1,13 +1,12 @@
-import { describe, it, expect, test, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { WordBank, wordBankErrors } from '../wordBank';
-import { useFetch } from '../../utils/fetch';
 
 const SERVER = new URL('http://127.0.0.1:8000/api/random-words/');
 
 describe('populateWordBank', () => {
     const wordBank = new WordBank();
     const mockFetch = vi.fn().mockImplementation((url: URL, param?: string) => ["one", "two", "three", "four"]);
-    wordBank._useFetch = mockFetch;
+    wordBank._fetchWords = mockFetch;
 
     it('calls fetch to correct endpoint', async () => {
         await wordBank.populateWordBank();

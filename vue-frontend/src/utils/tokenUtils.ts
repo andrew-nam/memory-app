@@ -1,8 +1,9 @@
-import { useFetch } from './fetch';
+import { UseFetch } from "./fetchUtils";
 
 const TOKEN_API = new URL('http://127.0.0.1:8000/api/speech-token/')
 
 export async function getTokenOrRefresh() {
+    var useFetch = new UseFetch();
     const cookie = document.cookie;
     const speechToken = cookie
         .split("; ")
@@ -11,7 +12,7 @@ export async function getTokenOrRefresh() {
 
     if (speechToken === undefined) {
         try {
-            const res = await useFetch(TOKEN_API, undefined);
+            const res = await useFetch.fetchToken(TOKEN_API);
             const token = res.token;
             const region = res.region;
             document.cookie = `speech-token=${region}:${token}; max-age=540; path=/`

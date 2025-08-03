@@ -1,21 +1,22 @@
 import { ref } from 'vue';
-import { useFetch } from "../utils/fetch";
+import { UseFetch } from "../utils/fetchUtils";
 import { removePunctuations } from "../utils/stringUtils";
 
 const SERVER = new URL('http://127.0.0.1:8000/api/random-words/');
 const MIN_WORDBANK_SIZE = 30;
 
+const useFetch = new UseFetch();
+
 export const wordBankErrors = ref("");
 
 export class WordBank {
-
-    _useFetch = useFetch;
+    _fetchWords = useFetch.fetchWords;
     server = SERVER;
     minWordBankSize = MIN_WORDBANK_SIZE;
     wordBank : string[] = [];
     
     async populateWordBank() : Promise<boolean> {
-        const result = await this._useFetch(this.server, '4000');
+        const result = await this._fetchWords(this.server, '4000');
         if(result instanceof Error) {
             console.error("Failed after maximum number of retry attempts, quitting");
             wordBankErrors.value = `Failed after maximum number of attempts, press retry to try again.`;
