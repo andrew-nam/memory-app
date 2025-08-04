@@ -1,16 +1,18 @@
-import { getTokenOrRefresh } from '../utils/tokenUtils';
+import { TokenUtil } from '../utils/tokenUtils';
 import * as speechsdk from 'microsoft-cognitiveservices-speech-sdk';
 
+var tokenUtil = new TokenUtil();
+
 export async function textToSpeech(textToSpeak : string) {
-        const tokenObj = await getTokenOrRefresh();
-        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
-        const myPlayer = new speechsdk.SpeakerAudioDestination();
-        const audioConfig = speechsdk.AudioConfig.fromSpeakerOutput(myPlayer);
+    const tokenObj = await tokenUtil.getTokenOrRefresh();
+    const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
+    const myPlayer = new speechsdk.SpeakerAudioDestination();
+    const audioConfig = speechsdk.AudioConfig.fromSpeakerOutput(myPlayer);
 
-        let synthesizer: speechsdk.SpeechSynthesizer | undefined = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
+    let synthesizer: speechsdk.SpeechSynthesizer | undefined = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
 
-        console.log(`speaking text: ${textToSpeak}...`);
-        synthesizer.speakTextAsync(
+    console.log(`speaking text: ${textToSpeak}...`);
+    synthesizer.speakTextAsync(
         textToSpeak,
         result => {
             let text;
@@ -32,7 +34,7 @@ export async function textToSpeech(textToSpeak : string) {
 }
 
 export async function sttFromMic() : Promise<string | Error> {
-    const tokenObj = await getTokenOrRefresh();
+    const tokenObj = await tokenUtil.getTokenOrRefresh();
     const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
     speechConfig.speechRecognitionLanguage = 'en-US';
     
