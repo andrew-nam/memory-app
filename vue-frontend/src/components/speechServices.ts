@@ -33,25 +33,23 @@ export async function textToSpeech(textToSpeak : string) {
         });
 }
 
-export async function sttFromMic() : Promise<string | Error> {
+export async function sttFromMic(callback: Function) {
     const tokenObj = await tokenUtil.getTokenOrRefresh();
     const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
     speechConfig.speechRecognitionLanguage = 'en-US';
     
     const audioConfig = speechsdk.AudioConfig.fromDefaultMicrophoneInput();
     const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
-    var recognizedWords = "";
 
-    await recognizer.recognizeOnceAsync(result => {
+    recognizer.recognizeOnceAsync(result => {
         if (result.reason === speechsdk.ResultReason.RecognizedSpeech) {
-            recognizedWords = result.text;
             console.log(`RECOGNIZED: Text=${result.text}`);
+            callback(result.text);
+            // TODO recognized words needs to emit signal to event for onWordsInterpretted
             //emit('display-text-updated', `RECOGNIZED: Text=${result.text}`);
         } else {
             console.log('ERROR: Speech was cancelled or could not be recognized. Ensure your microphone is working properly.');
             //emit('display-text-updated', 'ERROR: Speech was cancelled or could not be recognized. Ensure your microphone is working properly.');
         }
     });
-
-    return recognizedWords;
 }

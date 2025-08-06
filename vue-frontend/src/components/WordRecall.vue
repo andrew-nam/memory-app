@@ -29,11 +29,11 @@ onBeforeMount(async () => {
 });
 
 async function onListenForWords() {
-    var recognizedWords = await sttFromMic();
-    onWordsInterpretted(recognizedWords as string);
+    await sttFromMic(onWordsInterpretted);
 }
 
 function onWordsInterpretted(words:string) {
+    console.log(`onWordsInterpretted: ${words}`)
     var wordsArray = words.toLowerCase().split(" ");
     wordsArray = wordsArray.map((str) => removePunctuations(str)).reverse();
 

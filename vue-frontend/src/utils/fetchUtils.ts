@@ -1,10 +1,10 @@
 const RETRY_LIMIT = 5;
 
 export class UseFetch {
-    _fetch = fetch;
+    _fetch = window.fetch.bind(window);
     retries = 0;
 
-    async fetchWords(url: URL, param?: string) : Promise<any | Error> {
+    fetchWords = async (url: URL, param?: string) : Promise<any | Error> => {
         if (param != undefined) 
         {
             url = new URL(url.toString() + "?count=" + param);
@@ -12,11 +12,11 @@ export class UseFetch {
         return await this.useFetch(url);
     }
 
-    async fetchToken(url: URL) : Promise<any | Error> {
+    fetchToken = async (url: URL) : Promise<any | Error> => {
         return await this.useFetch(url);
     }
 
-    private async useFetch(url: URL) : Promise<any | Error> {
+    private useFetch = async (url: URL) : Promise<any | Error> =>{
         try {
             var response = await this._fetch(url);
 
