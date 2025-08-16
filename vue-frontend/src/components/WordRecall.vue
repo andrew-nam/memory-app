@@ -33,7 +33,6 @@ async function onListenForWords() {
 }
 
 function onWordsInterpretted(words:string) {
-    console.log(`onWordsInterpretted: ${words}`)
     var wordsArray = words.toLowerCase().split(" ");
     wordsArray = wordsArray.map((str) => removePunctuations(str)).reverse();
 
@@ -88,9 +87,9 @@ async function populateWordContainers() {
     }
 }
 
-function skip() {
+async function skip() {
     reset();
-    populateWordContainers();
+    await populateWordContainers();
     generateAudio();
 }
 
@@ -98,10 +97,10 @@ function skip() {
 
 <template>
     <div class="buttons">
-        <button @click="begin" v-show="showBeginButton">Begin</button>
+        <button data-test="begin-button" @click="begin" v-show="showBeginButton">Begin</button>
+        <p data-test="error-display" v-show="errorDisplay.length > 0">{{ errorDisplay }}</p>
     </div>
-    <div class="gameArea" v-show="showGameArea">
-        <p v-show="errorDisplay.length > 0">{{ errorDisplay }}</p>
+    <div data-test="game-area" class="gameArea" v-show="showGameArea">
         <div class="wordsContainer">
             <WordContainer 
                 v-for="(word, index) in wordContainerList"
@@ -112,10 +111,10 @@ function skip() {
             ></WordContainer>
         </div>
         <div class="buttons">
-            <button @click="playAgain" class="buttons" :disabled="disableRepeatButton">Play Again</button>
-            <button @click="reset" class="buttons">Reset</button>
-            <button @click="skip" class="buttons">Skip</button>
-            <button @click="onListenForWords" class="buttons">Say words</button>
+            <button data-test="play-again" @click="playAgain" class="buttons" :disabled="disableRepeatButton">Play Again</button>
+            <button data-test="reset" @click="reset" class="buttons">Reset</button>
+            <button data-test="skip" @click="skip" class="buttons">Skip</button>
+            <button data-test="say-words" @click="onListenForWords" class="buttons">Say words</button>
         </div>
         
     </div>

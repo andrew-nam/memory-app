@@ -12,13 +12,13 @@ const props = defineProps<{
 <template>
     {{ word }}
     {{ wordGuess }}
-    <div class=square v-if="isComplete" :class="[props.wordGuess == props.word ? 'correct' : 'incorrect']"></div>
+    <div data-test="result-div" class="result" v-if="isComplete" :class="[props.wordGuess == props.word ? 'correct' : 'incorrect']"></div>
     <div class="pending" ></div>
 
 </template>
 
 <style>
-.square {
+.result {
     width: 50px;
     height: 50px;
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
 import OptionsModal from './components/OptionsModal.vue';
-import WordRecall from './components/WordRecall.vue'
+import WordRecall from './components/WordRecall.vue';
 
 const showOptionsModal = ref(false);
 const setWordCount = ref(4);

@@ -37,9 +37,17 @@ export async function sttFromMic(callback: Function) {
     const tokenObj = await tokenUtil.getTokenOrRefresh();
     const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
     speechConfig.speechRecognitionLanguage = 'en-US';
+    speechConfig.requestWordLevelTimestamps();
     
     const audioConfig = speechsdk.AudioConfig.fromDefaultMicrophoneInput();
     const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
+
+    recognizer.recognizing = function (s, e) {
+        console.log("RECOGNIZING: " + e.result.text);
+        console.log("Offset in Ticks: " + e.result.offset);
+        console.log("Duration in Ticks: " + e.result.duration);
+        // TODO: determine timing of words using offset and duration
+    }
 
     recognizer.recognizeOnceAsync(result => {
         if (result.reason === speechsdk.ResultReason.RecognizedSpeech) {
