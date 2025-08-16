@@ -78,7 +78,7 @@ function reset() {
 }
 
 async function populateWordContainers() {
-    var words = await wordBank.requestNewWords(wordContainerList.value.length);
+    var words = await wordBank.requestNewWords(props.wordCount);
     if (words == null) {
         // TODO: Error messaging when not enough words and populate fails
         // TODO: display a try again button
