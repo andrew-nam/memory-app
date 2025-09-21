@@ -6,6 +6,10 @@ in the same order. After each round, results are collected and a new set of rand
 the number of words recited, the number of allowable playbacks,and the speed of the recitation. Results will be gathered and persisted so that the user can track their progress over 
 the longterm.
 
+Demo video: <br>
+[![Watch the video](https://img.youtube.com/vi/QBUpbKzNjRU/hqdefault.jpg)](https://www.youtube.com/embed/QBUpbKzNjRU)
+
+
 ## Client
 **Tech used:** HTML, CSS, TypeScript, Vue<br>
 The frontend was programmed with Vue and Typescript to take advantage of a reactive design. Given the intended audience, it was important to emphasize a simple, responsive, and intuitive
